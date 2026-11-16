@@ -1,3 +1,7 @@
+/* One small stylesheet, no framework: warm paper, dark header, orange
+   accent. Long handles and URLs wrap inside table cells instead of
+   blowing the table wider than the viewport. */
+
 :root {
   --paper: #faf7f1;
   --ink: #1c1913;
@@ -94,11 +98,17 @@ a:hover { text-decoration-thickness: 2px; }
 .banner.ok { background: #dcf5e6; color: #0a5c36; }
 .banner.warn { background: #fdeeda; color: #7a3410; }
 .cols { display: grid; grid-template-columns: 1fr 320px; gap: 32px; align-items: start; }
+/* Grid children default to min-width: auto, so a long unbroken entry title
+   in the aside would force the whole page wider than the viewport. */
+.cols > * { min-width: 0; }
 .cols h2, .cols aside h2 { font-size: 19px; margin: 28px 0 10px; }
 .desc p { margin: 0 0 10px; white-space: pre-wrap; }
 .desc h2, .desc h3 { margin: 20px 0 8px; }
 .desc ul { padding-left: 20px; }
 .top5 { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+/* Same trap one level down: a grid item's automatic minimum is its content
+   width, so a long entry title would blow the list past the aside. */
+.top5 li { min-width: 0; }
 .top5 li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .top5 li .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .top5 li strong { color: var(--green); }
@@ -106,7 +116,7 @@ a:hover { text-decoration-thickness: 2px; }
 /* tables */
 .tbl-wrap { overflow-x: auto; }
 .tbl { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; }
-.tbl th, .tbl td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl th, .tbl td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
 .tbl th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .tbl tr:hover td { background: #fdf9f3; }
 .tbl td strong { color: var(--green); }

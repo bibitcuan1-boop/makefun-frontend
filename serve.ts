@@ -3,6 +3,9 @@
 // app/ on http://localhost:8080 (`--port <n>` for another port). It sends the
 // MIME types a browser needs, refuses any path outside app/, and otherwise
 // does nothing clever: a development convenience, not a web server.
+//
+// Bind address is 127.0.0.1 on purpose — the app is only ever served to a
+// local browser or screenshot script, never to the network.
 
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';

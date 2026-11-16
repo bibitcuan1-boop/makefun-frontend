@@ -1,7 +1,9 @@
 // Small helpers for showing API values. Everything that reaches the page
 // goes through esc() first; numbers and dates are formatted once, here.
 
-/** Text made safe to put inside HTML. */
+/** Text made safe to put inside HTML.
+ *  Numeric character references (&#38; etc.) are safe in both text nodes
+ *  and quoted attribute values, so one escaper covers every insertion. */
 export function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
@@ -46,7 +48,9 @@ export function timeLeft(iso) {
   return `${Math.floor(ms / 1000)}s left`;
 }
 
-/** Whether a bounty still takes entries: its deadline, not its status, decides. */
+/** Whether a bounty still takes entries: its deadline, not its status, decides.
+ *  The API keeps status "open" past the deadline, so trusting status alone
+ *  would show a dead bounty as enterable. */
 export function takesEntries(b) {
   return b?.deadline ? new Date(b.deadline).getTime() > Date.now() : false;
 }

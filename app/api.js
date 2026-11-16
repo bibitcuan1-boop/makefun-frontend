@@ -3,6 +3,9 @@
 // minute, so a revalidation inside the same minute answers 304 and costs
 // almost nothing). Every call is counted in window.__apiStats so the footer
 // can show how little the app actually asks for.
+//
+// No credentials, no POST, no cookies: the public API is CORS-open, so the
+// browser talks to it directly and the app has no backend at all.
 
 const API = 'https://make.fun/api';
 const TTL = 60_000;
