@@ -6,6 +6,10 @@
 // Serve the app locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+//
+// The dossier caps below mirror the scorer's gate: more than 3 screenshots
+// or one over 256 KiB, or more than 993 files / 16 MiB under app/, and the
+// entry is refused — so the build refuses itself first, loudly.
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

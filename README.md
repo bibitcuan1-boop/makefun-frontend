@@ -31,3 +31,5 @@ mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts   # writes out/dossier.json
 ```
 
 Built for the make.fun bounty **"Build the best make.fun frontend"** ([makefun-frontend-01](https://make.fun/bounty/makefun-frontend-01)).
+
+Try make.fun yourself: https://make.fun/?ref=1kbmej5w
