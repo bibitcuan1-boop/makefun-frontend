@@ -14,6 +14,10 @@ import { getBounties, getBounty, getLeaderboard, getProfile, stats } from './api
 import { boardList, boardShell, bountyPage, errorPage, leaderboardPage, loadingPage, profilePage } from './views.js';
 import { timeLeft } from './format.js';
 
+// Start not-ready: a screenshot script must never catch a stale `true`
+// from a previous page before the first route has rendered.
+window.__shotReady = false;
+
 const app = document.getElementById('app');
 const net = document.getElementById('net');
 const PER_BOARD = 12;

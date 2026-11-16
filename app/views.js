@@ -1,5 +1,7 @@
 // The four surfaces, each a function from API data to HTML. All values are
-// escaped in format.js; links are the hash routes main.js reads.
+// escaped in format.js; links are the hash routes main.js reads. External
+// links open in a new tab with rel="noopener" so they cannot reach back
+// into this page.
 
 import { bytes, date, esc, imgUrl, money, num, pct, shortAddr, takesEntries, timeLeft } from './format.js';
 
@@ -145,7 +147,7 @@ export function bountyPage(b, top) {
         <div><dt>Status</dt><dd>${esc(b.status ?? '—')}</dd></div>
       </dl>
       ${(b.skills?.length) ? `<h2>Skills</h2><p>${b.skills.map((s) => `<span class="chip">${esc(s)}</span>`).join(' ')}</p>` : ''}
-      <p><a href="https://make.fun/bounty/${encodeURIComponent(b.slug)}">Open on make.fun ↗</a></p>
+      <p><a href="https://make.fun/bounty/${encodeURIComponent(b.slug)}" target="_blank" rel="noopener">Open on make.fun ↗</a></p>
     </aside>
   </section>`;
 }
@@ -184,10 +186,10 @@ export function leaderboardPage(lb, slug, page, perPage) {
 export function profilePage(p) {
   const rec = p.record ?? {};
   const links = [];
-  if (p.github_login) links.push(`<a href="https://github.com/${encodeURIComponent(p.github_login)}">GitHub @${esc(p.github_login)}</a>`);
-  if (p.x?.url) links.push(`<a href="${esc(p.x.url)}">X @${esc(p.x.username ?? '')}</a>`);
-  if (p.discord?.url) links.push(`<a href="${esc(p.discord.url)}">Discord ${esc(p.discord.global_name ?? p.discord.username ?? '')}</a>`);
-  if (p.wallet?.address) links.push(`<a href="${esc(p.wallet.explorer_url ?? '')}">Wallet ${shortAddr(p.wallet.address)}</a>`);
+  if (p.github_login) links.push(`<a href="https://github.com/${encodeURIComponent(p.github_login)}" target="_blank" rel="noopener">GitHub @${esc(p.github_login)}</a>`);
+  if (p.x?.url) links.push(`<a href="${esc(p.x.url)}" target="_blank" rel="noopener">X @${esc(p.x.username ?? '')}</a>`);
+  if (p.discord?.url) links.push(`<a href="${esc(p.discord.url)}" target="_blank" rel="noopener">Discord ${esc(p.discord.global_name ?? p.discord.username ?? '')}</a>`);
+  if (p.wallet?.address) links.push(`<a href="${esc(p.wallet.explorer_url ?? '')}" target="_blank" rel="noopener">Wallet ${shortAddr(p.wallet.address)}</a>`);
   const sols = p.solutions ?? [];
   return `
   <section class="hero prof">
@@ -209,7 +211,7 @@ export function profilePage(p) {
   <h2>Entries (${num(sols.length)})</h2>
   ${!sols.length ? '<p class="empty">No public entries yet.</p>' : `<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Entry</th><th scope="col">Bounty</th><th scope="col">Place</th><th scope="col">Score</th><th scope="col">Prize</th><th scope="col">Entered</th></tr></thead><tbody>${
     sols.map((s) => `<tr>
-      <td><a href="https://make.fun/s/${encodeURIComponent(s.submission_id)}">${esc(s.title)}</a></td>
+      <td><a href="https://make.fun/s/${encodeURIComponent(s.submission_id)}" target="_blank" rel="noopener">${esc(s.title)}</a></td>
       <td><a href="#/bounty/${encodeURIComponent(s.competition.slug)}">${esc(s.competition.title)}</a></td>
       <td>${s.placement ? `#${num(s.placement)}` : '—'}</td>
       <td>${s.score ? (s.score.column?.key === 'judge' ? pct(s.score.value) : esc(s.score.display ?? s.score.value)) : '—'}</td>
