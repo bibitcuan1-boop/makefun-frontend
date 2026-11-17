@@ -1,58 +1,116 @@
-// make.fun public API, read-only GET. One tiny cache: answers are kept for
-// 60 s and revalidated with If-None-Match (the API's ETags are bound to the
-// minute, so a revalidation inside the same minute answers 304 and costs
-// almost nothing). Every call is counted in window.__apiStats so the footer
-// can show how little the app actually asks for.
+// make.fun public API client — GET only, read-only, no key, no sign-in.
 //
-// No credentials, no POST, no cookies: the public API is CORS-open, so the
-// browser talks to it directly and the app has no backend at all.
+// The API answers any origin (Access-Control-Allow-Origin: *) and sends
+// Cache-Control: private, no-cache with an ETag. This module keeps one
+// in-memory cache per URL with a 60 second lifetime and de-duplicates
+// in-flight requests, so a view costs few requests and a re-visit inside
+// the minute reuses the answer instead of fetching again.
 
-const API = 'https://make.fun/api';
-const TTL = 60_000;
+const BASE = "https://make.fun/api";
+const TTL_MS = 60_000;
 
-const cache = new Map(); // path -> { etag, body, at }
-export const stats = { requests: 0, served304: 0, bytes: 0 };
-if (typeof window !== 'undefined') window.__apiStats = stats;
+const cache = new Map(); // url -> { at: number, data: unknown }
+const inflight = new Map(); // url -> Promise<unknown>
 
-async function get(path) {
-  const hit = cache.get(path);
-  const fresh = hit && Date.now() - hit.at < TTL;
-  if (fresh) return hit.body;
-  stats.requests += 1;
-  const headers = {};
-  if (hit?.etag) headers['If-None-Match'] = hit.etag;
-  const res = await fetch(API + path, { headers });
-  if (res.status === 304 && hit) {
-    stats.served304 += 1;
-    hit.at = Date.now();
-    return hit.body;
-  }
-  const text = await res.text();
-  stats.bytes += text.length;
-  if (!res.ok) {
-    let message = `make.fun answered ${res.status}`;
-    try {
-      const err = JSON.parse(text);
-      if (err?.error?.[0]?.message) message = err.error[0].message;
-    } catch { /* keep the status message */ }
-    const e = new Error(message);
-    e.status = res.status;
-    throw e;
-  }
-  const body = JSON.parse(text);
-  cache.set(path, { etag: res.headers.get('etag'), body, at: Date.now() });
-  return body;
+function cacheKey(path) {
+  return BASE + path;
 }
 
-/** Live bounties, newest activity first is the API's order; activity=times keeps each listing light. */
-export const getBounties = () => get('/competitions?status=open&activity=times');
+async function getJson(path, { force = false } = {}) {
+  const url = cacheKey(path);
+  const now = Date.now();
+  if (!force) {
+    const hit = cache.get(url);
+    if (hit && now - hit.at < TTL_MS) return hit.data;
+    const pending = inflight.get(url);
+    if (pending) return pending;
+  }
+  const promise = (async () => {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      const err = new Error(`make.fun API ${res.status} for ${path}`);
+      err.status = res.status;
+      err.path = path;
+      throw err;
+    }
+    const data = await res.json();
+    cache.set(url, { at: Date.now(), data });
+    return data;
+  })();
+  inflight.set(url, promise);
+  try {
+    return await promise;
+  } finally {
+    inflight.delete(url);
+  }
+}
 
-/** One bounty, with its rewards table and live pot; submissions=summary skips the (huge) entry list. */
-export const getBounty = (slug) => get(`/competitions/${encodeURIComponent(slug)}?submissions=summary`);
+function query(params) {
+  const parts = [];
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+  }
+  return parts.length ? `?${parts.join("&")}` : "";
+}
 
-/** A bounty's leaderboard in one view (overall or performance). */
-export const getLeaderboard = (slug, view = 'performance') =>
-  get(`/competitions/${encodeURIComponent(slug)}/leaderboard?view=${view}`);
+// The board. Follows next_cursor until every page is in, so the board
+// shows all live bounties, not just the first page.
+export async function listCompetitions({ status, category, force = false } = {}) {
+  const items = [];
+  let cursor = undefined;
+  let guard = 0;
+  do {
+    const page = await getJson(
+      `/competitions${query({ status, category, cursor, limit: 100 })}`,
+      { force: force && guard === 0 },
+    );
+    items.push(...(page.items || []));
+    cursor = page.next_cursor || undefined;
+    guard += 1;
+  } while (cursor && guard < 20);
+  return items;
+}
 
-/** An account's public profile: links, record and solutions. */
-export const getProfile = (handle) => get(`/profiles/${encodeURIComponent(handle)}`);
+// One bounty, with its embedded entries when the server includes them.
+export function getCompetition(slug, { force = false } = {}) {
+  return getJson(`/competitions/${encodeURIComponent(slug)}`, { force });
+}
+
+// A bounty's ranked entries. rows caps the page the server sends.
+export function getLeaderboard(slug, { rows = 100, force = false } = {}) {
+  return getJson(
+    `/competitions/${encodeURIComponent(slug)}/leaderboard${query({ rows })}`,
+    { force },
+  );
+}
+
+// A bounty's entries (submissions), newest first, paged by cursor.
+export async function listSubmissions(slug, { limit = 50, force = false } = {}) {
+  const items = [];
+  let cursor = undefined;
+  let guard = 0;
+  do {
+    const page = await getJson(
+      `/competitions/${encodeURIComponent(slug)}/submissions${query({ limit, cursor })}`,
+      { force: force && guard === 0 },
+    );
+    items.push(...(page.items || []));
+    cursor = page.next_cursor || undefined;
+    guard += 1;
+  } while (cursor && guard < 10 && items.length < 200);
+  return items;
+}
+
+// An account's public profile: links, record and solutions.
+export function getProfile(handle, { force = false } = {}) {
+  return getJson(`/profiles/${encodeURIComponent(handle)}`, { force });
+}
+
+// Drop one cached answer, or the whole cache (used by the 60s revalidate).
+export function bustCache(path) {
+  if (path) cache.delete(cacheKey(path));
+  else cache.clear();
+}

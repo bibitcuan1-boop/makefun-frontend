@@ -1,30 +1,47 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
-<meta name="description" content="A fast, unofficial frontend for make.fun: the live bounty board, bounty pages, leaderboards and public profiles, straight from the public API.">
-<title>make.fun board — live bounties</title>
-<link rel="stylesheet" href="style.css">
-<script type="module" src="main.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A fast, read-only browser for make.fun bounties: the live board, bounty pages, leaderboards and public profiles, straight from make.fun's public API.">
+  <title>make.fun — bounties, leaderboards &amp; profiles</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<a class="skip" href="#app">Skip to content</a>
-<header class="top">
-  <div class="wrap top-in">
-    <a class="brand" href="#/" aria-label="make.fun board, home"><span class="mark" aria-hidden="true">◆</span> make.fun <span class="brand-sub">board</span></a>
-    <nav aria-label="Sections">
-      <a href="#/">Bounties</a>
-      <a href="#/bounty/makefun-frontend-01">This bounty</a>
-      <a href="#/u/bibit-cuan">@bibit-cuan</a>
-    </nav>
-  </div>
-</header>
-<main id="app" class="wrap" tabindex="-1"></main>
-<footer class="wrap foot">
-  <p>Unofficial, read-only frontend. Live data from the <a href="https://make.fun/api/openapi.json">make.fun public API</a> — no sign-in, no writes, no trackers.</p>
-  <p id="net" aria-live="polite"></p>
-</footer>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#/" aria-label="make.fun bounty board, home">
+        <span class="brand-mark" aria-hidden="true">m.</span>
+        <span class="brand-name">make.fun</span>
+        <span class="brand-sub">bounty browser</span>
+      </a>
+      <nav class="topnav" aria-label="Main">
+        <a href="#/" data-nav="board">Board</a>
+        <a href="https://make.fun" target="_blank" rel="noopener">make.fun ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="view" class="wrap" aria-live="polite">
+    <div class="loading" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Loading live bounties from make.fun…</p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p>Read-only. No sign-in, no writes, no tracking. All data comes live from
+        <a href="https://make.fun/api/openapi.json" target="_blank" rel="noopener">make.fun&rsquo;s public API</a>.
+      </p>
+      <p class="footer-note">A bounty is open for entries until its deadline passes — a bounty past its
+        deadline may still read &ldquo;open&rdquo; until its results are published.</p>
+    </div>
+  </footer>
+
+  <noscript>
+    <p style="text-align:center;padding:1rem">This browser needs JavaScript to fetch live data from make.fun.</p>
+  </noscript>
+  <script type="module" src="/main.js"></script>
 </body>
 </html>
