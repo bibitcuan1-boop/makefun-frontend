@@ -154,7 +154,7 @@ function renderLbList() {
 async function renderLeaderboard(slug, force) {
   const [comp, data] = await Promise.all([
     getCompetition(slug, { force }),
-    getLeaderboard(slug, { rows: 500, force }),
+    getLeaderboard(slug, { rows: "all", force }),
   ]);
   lbEntries = data.entries || [];
   lbPage = 1;
