@@ -1,35 +1,48 @@
-[![make.fun · makefun-frontend-01](https://make.fun/badge/makefun-frontend-01.svg)](https://make.fun/bounty/makefun-frontend-01?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
-[![rank](https://make.fun/badge/makefun-frontend-01/bibitcuan1-boop/makefun-frontend/rank.svg)](https://make.fun/bounty/makefun-frontend-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
-[![reward](https://make.fun/badge/makefun-frontend-01/bibitcuan1-boop/makefun-frontend/reward.svg)](https://make.fun/bounty/makefun-frontend-01?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
+# make.fun bounty browser
 
-# makefun-frontend
+A fast, read-only frontend for [make.fun](https://make.fun/bounty/makefun-frontend-01) — built for the
+[“Build the best make.fun frontend” bounty](https://make.fun/bounty/makefun-frontend-01).
 
-A fast, unofficial frontend for [make.fun](https://make.fun/bounty/makefun-frontend-01) — static files, no build step, no framework, no fonts, no trackers. It reads only the make.fun public API (GET, CORS) and shows all four surfaces, each on its own hash route:
+![make.fun frontend bounty](https://make.fun/badge/makefun-frontend-01.svg)
+![rank](https://make.fun/badge/makefun-frontend-01/bibitcuan1-boop/makefun-frontend/rank.svg)
+![reward](https://make.fun/badge/makefun-frontend-01/bibitcuan1-boop/makefun-frontend/reward.svg)
 
-- `#/` — the live bounty board: each bounty with its live pot, entry fee, deadline / time left and entries, plus search, sort and status filters
-- `#/bounty/<slug>` — a bounty's page: summary, description and rules, rewards table with the live pot, dates, status (a bounty past its deadline reads "closed to entries" even while its status still says open), and a top-5 preview
-- `#/bounty/<slug>/leaderboard` — that bounty's leaderboard (overall / performance views, paginated)
-- `#/u/<handle>` — an account's public profile: links, record and entries
+## What it does
 
-## Why it is fast
+Plain static files under `app/` — no build step, no framework, no font or
+script loaded from anywhere but make.fun. It reads make.fun's public API
+(`GET https://make.fun/api` only, no sign-in, no writes) and shows four
+surfaces, each with its own hash URL:
 
-- First load is 6 small files (HTML + CSS + 4 ES modules, ~26 KB raw) — no framework, no fonts.
-- API answers are cached for 60 s and revalidated with `If-None-Match` (the API's ETags are bound to the minute, so a revalidation inside the same minute answers 304). The footer shows the live request count.
-- Long lists page client-side (12 cards, 25 leaderboard rows); countdowns tick in place every 30 s without re-fetching or rebuilding the page.
-- A bounty page fetches with `?submissions=summary`, so it never downloads the (hundreds-long) entry list.
+- **Board** — `#/` — every live bounty with its live pot, entry fee, time
+  left and entry count; search, category and status filters, sorting, pages.
+- **Bounty page** — `#/bounty/<slug>` — summary, full description and rules,
+  rewards table with the live pot, dates and status, and its entries.
+- **Leaderboard** — `#/bounty/<slug>/leaderboard` — the bounty's ranked
+  entries with judge win rates and win/draw/loss records.
+- **Profile** — `#/u/<handle>` — an account's public information, record
+  and entries.
 
-## Run it
+A bounty takes entries until its deadline passes — the app says so from
+the deadline, not from the status alone, because a bounty past its deadline
+may still read “open” until its results are published.
+
+API answers are cached in memory for 60 seconds, long lists are paginated,
+and paging/filtering update only the list on screen. `window.__shotReady`
+is `false` while a route loads and `true` once its data has rendered.
+
+## Run it locally
 
 ```sh
-node serve.ts   # app/ on http://localhost:8080
+node serve.ts            # http://localhost:8080/
+node serve.ts --port 8090
 ```
 
-## Hand it in
+## Hand in
 
 ```sh
-mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts   # writes out/dossier.json
+MAKEFUN_OUTPUT_DIR=/output node main.ts
 ```
 
-Built for the make.fun bounty **"Build the best make.fun frontend"** ([makefun-frontend-01](https://make.fun/bounty/makefun-frontend-01)).
-
-Try make.fun yourself: https://make.fun/?ref=1kbmej5w
+`main.ts` copies `app/` and `screenshots/` into the output directory and
+writes `dossier.json` there.

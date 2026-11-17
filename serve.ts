@@ -1,67 +1,78 @@
-// A tiny static server for app/ (Node 22, standard library only), so the
-// frontend can be run locally without a build step: `node serve.ts` serves
-// app/ on http://localhost:8080 (`--port <n>` for another port). It sends the
-// MIME types a browser needs, refuses any path outside app/, and otherwise
-// does nothing clever: a development convenience, not a web server.
-//
-// Bind address is 127.0.0.1 on purpose — the app is only ever served to a
-// local browser or screenshot script, never to the network.
+// Tiny static server for local testing of app/ — nothing else.
+// Serves on localhost, port 8080 by default, or --port <n>.
+// Node standard library only.
 
-import { createReadStream, statSync } from 'node:fs';
-import { createServer } from 'node:http';
-import { extname, join, normalize, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createServer } from "node:http";
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = resolve(fileURLToPath(new URL('./app', import.meta.url)));
-const args = process.argv.slice(2);
-const portIndex = args.indexOf('--port');
-const requested = portIndex === -1 ? 8080 : Number(args[portIndex + 1]);
-const port = Number.isInteger(requested) && requested > 0 && requested < 65536 ? requested : 8080;
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "app");
 
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.ico': 'image/x-icon',
+const mime: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".txt": "text/plain; charset=utf-8",
 };
 
-createServer((request, response) => {
-  const url = new URL(request.url ?? '/', 'http://localhost');
-  let pathname;
+function parsePort(argv: string[]): number {
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === "--port" && argv[i + 1]) {
+      const n = Number(argv[i + 1]);
+      if (Number.isInteger(n) && n > 0 && n < 65536) return n;
+    }
+    const match = argv[i].match(/^--port=(\d+)$/);
+    if (match) return Number(match[1]);
+  }
+  return 8080;
+}
+
+const port = parsePort(process.argv.slice(2));
+
+const server = createServer(async (req, res) => {
   try {
-    pathname = decodeURIComponent(url.pathname);
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      res.writeHead(405, { "Content-Type": "text/plain" });
+      res.end("Method not allowed\n");
+      return;
+    }
+    const url = new URL(req.url || "/", "http://localhost");
+    let pathname = decodeURIComponent(url.pathname);
+    if (pathname.endsWith("/")) pathname += "index.html";
+    const resolved = path.normalize(path.join(root, pathname));
+    // Refuse anything outside app/, including ".." escapes and symlinks
+    // that point out (checked again after resolving the real path below).
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+      res.writeHead(403, { "Content-Type": "text/plain" });
+      res.end("Forbidden\n");
+      return;
+    }
+    const info = await stat(resolved).catch(() => null);
+    if (!info || !info.isFile()) {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Not found\n");
+      return;
+    }
+    const body = await readFile(resolved);
+    const type = mime[path.extname(resolved).toLowerCase()] || "application/octet-stream";
+    res.writeHead(200, { "Content-Type": type, "Content-Length": body.length });
+    if (req.method === "GET") res.end(body);
+    else res.end();
   } catch {
-    response.writeHead(400).end('bad request');
-    return;
+    res.writeHead(500, { "Content-Type": "text/plain" });
+    res.end("Server error\n");
   }
-  if (pathname.endsWith('/')) pathname += 'index.html';
-  const file = resolve(join(root, normalize(pathname)));
-  if (file !== root && !file.startsWith(root + sep)) {
-    response.writeHead(403).end('forbidden');
-    return;
-  }
-  let size;
-  try {
-    const stats = statSync(file);
-    if (!stats.isFile()) throw new Error('not a file');
-    size = stats.size;
-  } catch {
-    response.writeHead(404).end('not found');
-    return;
-  }
-  response.writeHead(200, {
-    'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream',
-    'content-length': size,
-    'cache-control': 'no-store',
-  });
-  createReadStream(file).pipe(response);
-}).listen(port, '127.0.0.1', () => {
-  console.log(`app/ is on http://localhost:${port}`);
+});
+
+server.listen(port, "127.0.0.1", () => {
+  console.log(`Serving app/ at http://localhost:${port}/`);
 });
